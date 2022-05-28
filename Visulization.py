@@ -48,9 +48,9 @@ class Tracker(object):
         try:
             connection =  mysql.connector.connect(
                           host="localhost",
-                          user="yourusername",
-                          password="yourpassword",
-                          database="mydatabase")
+                          user="*******",
+                          password="********",
+                          database="LeyanaSugarStudio")
         except (Exception, psycopg2.Error) as error:
             print("Error while connecting to PostgreSQL", error)
         return connection
