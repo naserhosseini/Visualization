@@ -1,12 +1,10 @@
 import datetime
-import psycopg2
-from docutils.utils import Reporter
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
 import mysql.connector
 
 
-class Tracker(object):
+class Tracker():
     """
     job_id, status, updated_time
     """
@@ -14,7 +12,6 @@ class Tracker(object):
         self.jobname = jobname
         self.dbconfig = dbconfig
     def assign_job_id(self):
-        # [Construct the job ID and assign to the return variable]
         job_id = str(datetime.datetime.now())
         return job_id
     def update_job_status(self, status):
@@ -28,17 +25,17 @@ class Tracker(object):
             SQL = 'INSERT  INTO {} (job_status,update_time) VALUES({}, {})'.format(table_name)
             VAL = (status, update_time)
             self.dbconfig.execute(SQL, VAL)
-        except (Exception, psycopg2.Error) as error:
+        except (Exception) as error:
             print("error executing db statement for job tracker.")
         return
-    def get_job_status(self, job_id):
-        # connect db and send sql query
-        table_name = self.dbconfig.get('postgres', 'job_tracker_table_name')
-        connection = self.get_db_connection()
+    def get_job_status(self, job_id, table_name):
+        self.get_db_connection()
+
         try:
-            record = 1 # [Execute SQL query to get the record]
+            record = "SELECT  * FROM {} LIMIT 1".format(table_name)
+            self.dbconfig.execute(record)
             return record
-        except (Exception, psycopg2.Error) as error:
+        except (Exception) as error:
             print("error executing db statement for job tracker.")
             return
 
@@ -51,20 +48,23 @@ class Tracker(object):
                           user="*******",
                           password="********",
                           database="LeyanaSugarStudio")
-        except (Exception, psycopg2.Error) as error:
-            print("Error while connecting to PostgreSQL", error)
+        except (Exception) as error:
+            print("Error while connecting to MySQL", error)
         return connection
+
+
+def run_reporter_etl(my_config):
+    tracker = Tracker('analytical_etl', my_config)
+    try:
+        return tracker.update_job_status("success")
+    except Exception as e:
+        print(e)
+        return tracker.update_job_status("failed")
+
+
 
 conf = SparkConf().setAppName('Visulizatoin').setMaster('local')
 sc = SparkContext(conf=conf)
 spark = SparkSession(sparkContext= sc)
-def run_reporter_etl(my_config):
-    trade_date = my_config.get('production', 'processing_date')
-    reporter = Reporter(spark, my_config)
-    tracker = Tracker('analytical_etl', my_config)
-    try:
-        tracker.update_job_status("success")
-    except Exception as e:
-        print(e)
-        tracker.update_job_status("failed")
-    return
+results = run_reporter_etl(conf)
+print(results)
